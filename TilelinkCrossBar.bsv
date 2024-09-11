@@ -97,15 +97,6 @@ module mkTilelinkConnection #(
     typedef TLD#(addr_width, data_width, size_width, source_width, sink_width) X_TLD;
     typedef TLE#(addr_width, data_width, size_width, source_width, sink_width) X_TLE;
 
-    function Bit#(size_width) getSizeFromTLA(X_TLA tla);
-        Bit#(3) op = pack(tla.opcode);
-        return op[3] ? '0 : tla.size;
-    endfunction
-
-    function Bit#(size_width) getSizeFromTLD(X_TLD tld);
-        return tld.size;
-    endfunction
-
     Vector#(mst_num, Get#(X_TLA)) mst_a_intf = ?;
     Vector#(mst_num, Put#(X_TLB)) mst_b_intf = ?;
     Vector#(mst_num, Get#(X_TLC)) mst_c_intf = ?;
@@ -157,10 +148,23 @@ module mkTilelinkConnection #(
         return routeSink(mst, tle.sink);
     endfunction
 
+    function Bit#(size_width) getSizeFromTLA(X_TLA tla);
+        Bit#(3) op = pack(tla.opcode);
+        return op[3] ? '0 : tla.size;
+    endfunction
+
+    function Bit#(size_width) getSizeFromTLC(X_TLC tlc);
+        return tlc.size;
+    endfunction
+
+    function Bit#(size_width) getSizeFromTLD(X_TLD tld);
+        return tld.size;
+    endfunction
+
     // Create 5 Crossbar
     tla_crossbar <- mkCrossbarConnect(routeA, mkTLXArbiter(max_size, data_width, getSizeFromTLA, mkArbMst), mst_a_intf, slv_a_intf);
     tlb_crossbar <- mkCrossbarConnect(routeB, mkXArbiter(mkArbSlv), slv_b_intf, mst_b_intf);
-    tlc_crossbar <- mkCrossbarConnect(routeC, mkXArbiter(mkArbMst), mst_c_intf, slv_c_intf);
+    tlc_crossbar <- mkCrossbarConnect(routeC, mkTLXArbiter(max_size, data_width, getSizeFromTLC, mkArbMst), mst_c_intf, slv_c_intf);
     tld_crossbar <- mkCrossbarConnect(routeD, mkTLXArbiter(max_size, data_width, getSizeFromTLD, mkArbSlv), slv_d_intf, mst_d_intf);
     tle_crossbar <- mkCrossbarConnect(routeE, mkXArbiter(mkArbMst), mst_e_intf, slv_e_intf);
 
