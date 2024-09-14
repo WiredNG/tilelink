@@ -7,11 +7,13 @@ package TilelinkFake;
 // Mst receive Tilelink-B and issue Tilelink-C with arbiter posible size,
 // Slv receive Tilelink-C and issue Tilelink-D with arbiter posible size,
 // Mst receive Tilelink-D and issue Tilelink-E with release of ID
-module TilelinkPingPongMst (
+module mkTilelinkPingPongMst (
 
 );
 
-module TilelinkPingPongSlv (
+endmodule
+
+module mkTilelinkPingPongSlv (
 
 );
 

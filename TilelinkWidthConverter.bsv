@@ -1,9 +1,10 @@
-package TilelinkWidthConverter
+package TilelinkWidthConverter;
 
 import Vector::*;
+import GetPut::*;
 
 // Master port width is bigger than Slave port
-module TLXWidthDownsizer (
+module mkTLXWidthDownsizer (
     Tuple2#(
         Put#(Tuple3#(ptr_t, ptr_t, payload_mst_t)),
         Get#(payload_slv_t)
@@ -20,12 +21,12 @@ Reg#(ptr_t) rptr[2] <- mkCReg(2, ?);
 Reg#(ptr_t) left[2] <- mkCReg(2, ?);
 Reg#(Vector#(muler, Bit#(slv_width))) buffer [2] <- mkCReg(2, ?);
 
-Wire#(Bit#(slv_width)) slv_data;
+Wire#(Bit#(slv_width)) slv_data <- mkWire;
 rule slv_read(v[1]);
     slv_data <= buffer[1][rptr[1]];
 endrule
 
-Wire#(Bool) put_barrier;
+Wire#(Bool) put_barrier <- mkWire;
 rule put_guard(!v[0]);
     put_barrier <= True;
 endrule
@@ -61,7 +62,7 @@ return tuple2(p, g);
 
 endmodule
 
-module TLXWidthUpsizer (
+module mkTLXWidthUpsizer (
     Tuple2#(
         Put#(Tuple3#(ptr_t, ptr_t, payload_mst_t)),
         Get#(payload_slv_t)
@@ -78,13 +79,13 @@ Reg#(ptr_t) rptr[2] <- mkCReg(2, ?);
 Reg#(ptr_t) left[2] <- mkCReg(2, ?);
 Reg#(Vector#(muler, Bit#(mst_width))) buffer [2] <- mkCReg(2, ?);
 
-Wire#(Bit#(slv_width)) slv_data;
+Wire#(Bit#(slv_width)) slv_data <- mkWire;
 rule slv_read(v[1] && left[1] == 0);
     slv_data <= buffer[1];
 endrule
 
 // No on-going transfer.
-Wire#(Bool) put_barrier;
+Wire#(Bool) put_barrier <- mkWire;
 rule put_guard(!v[0] || left[0] != 0);
     put_barrier <= True;
 endrule
