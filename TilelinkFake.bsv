@@ -179,7 +179,6 @@ module mkTilelinkPingPongSlv #(
             corrupt : tlc.corrupt,
             data    : tlc.data
         };
-        $display("Enq TLD Request %x with size %d", tlc.source, tlc.size);
         tld_src.enq(ret);
         tlc_dst.deq();
     endrule

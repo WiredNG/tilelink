@@ -148,38 +148,19 @@ module mkTilelinkCrossBar #(
 
     // Create routing function
     // Channel A and Channel C are routed by address.
-    function Bit#(slv_num) routeA(mst_index_t mst, TLA#(`TLPARMS) tla);
-        return routeAddress(mst, tla.address);
-    endfunction
-    function Bit#(slv_num) routeC(mst_index_t mst, TLC#(`TLPARMS) tlc);
-        return routeAddress(mst, tlc.address);
-    endfunction
+    function Bit#(slv_num) routeA(mst_index_t mst, TLA#(`TLPARMS) tla) = routeAddress(mst, tla.address);
+    function Bit#(slv_num) routeC(mst_index_t mst, TLC#(`TLPARMS) tlc) = routeAddress(mst, tlc.address);
 
     // Channel B and Channel D are routed by source.
-    function Bit#(mst_num) routeB(slv_index_t slv, TLB#(`TLPARMS) tlb);
-        return routeSource(slv, tlb.source);
-    endfunction
-    function Bit#(mst_num) routeD(slv_index_t slv, TLD#(`TLPARMS) tld);
-        return routeSource(slv, tld.source);
-    endfunction
+    function Bit#(mst_num) routeB(slv_index_t slv, TLB#(`TLPARMS) tlb) = routeSource(slv, tlb.source);
+    function Bit#(mst_num) routeD(slv_index_t slv, TLD#(`TLPARMS) tld) = routeSource(slv, tld.source);
 
     // Channel E are routed by sink
-    function Bit#(slv_num) routeE(mst_index_t mst, TLE#(`TLPARMS) tle);
-        return routeSink(mst, tle.sink);
-    endfunction
+    function Bit#(slv_num) routeE(mst_index_t mst, TLE#(`TLPARMS) tle) = routeSink(mst, tle.sink);
 
-    function Bit#(size_width) getSizeFromTLA(TLA#(`TLPARMS) tla);
-        Bit#(3) op = pack(tla.opcode);
-        return unpack(op[2]) ? '0 : tla.size;
-    endfunction
-
-    function Bit#(size_width) getSizeFromTLC(TLC#(`TLPARMS) tlc);
-        return tlc.size;
-    endfunction
-
-    function Bit#(size_width) getSizeFromTLD(TLD#(`TLPARMS) tld);
-        return tld.size;
-    endfunction
+    function Bit#(size_width) getSizeFromTLA(TLA#(`TLPARMS) tla) = unpack(pack(tla.opcode)[2]) ? '0 : tla.size;
+    function Bit#(size_width) getSizeFromTLC(TLC#(`TLPARMS) tlc) = tlc.size;
+    function Bit#(size_width) getSizeFromTLD(TLD#(`TLPARMS) tld) = tld.size;
 
     // Create Empty INFO to pass parameters.
     TLINFO#(`TLPARMS) tInfo = unpack('0);

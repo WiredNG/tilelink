@@ -9,5 +9,6 @@ import TilelinkBurstTracker::*;
 import TilelinkCrossBar::*;
 import TilelinkFake::*;
 import TilelinkBurstTracker::*;
+import TilelinkFIFO::*;
 // import TilelinkWidthConverter::*;
 `endif
