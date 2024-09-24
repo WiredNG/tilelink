@@ -83,7 +83,7 @@ module mkTLXArbiter #(
 
 endmodule
 
-module mkTilelinkConnection #(
+module mkTLXConnection #(
     function Bit#(slv_num) routeAddress(mst_index_t mst, Bit#(addr_width) addr),
     function Bit#(mst_num) routeSource(slv_index_t slv, Bit#(source_width) source),
     function Bit#(slv_num) routeSink(mst_index_t mst, Bit#(sink_width) sink),
@@ -124,7 +124,7 @@ module mkTilelinkConnection #(
         slv_d_intf[s] = slv_if[s].tld;
         slv_e_intf[s] = slv_if[s].tle;
     end
-    
+
     // Create routing function
     // Channel A and Channel C are routed by address.
     function Bit#(slv_num) routeA(mst_index_t mst, TLA#(`TLPARMS) tla);

@@ -19,14 +19,14 @@ typedef enum {
 } TLA_OP deriving(Bits, Eq, FShow);
 
 typedef struct {
-    TLA_OP               opcode ;
-    Bit#(3)              param  ;
-    Bit#(size_width)     size   ;
-    Bit#(source_width)   source ;
-    Bit#(addr_width)     address;
+    TLA_OP                     opcode ;
+    Bit#(3)                    param  ;
+    Bit#(size_width)           size   ;
+    Bit#(source_width)         source ;
+    Bit#(addr_width)           address;
     Bit#(TDiv#(data_width, 8)) mask   ;
-    Bool                 corrupt;
-    Bit#(data_width)     data   ;
+    Bool                       corrupt;
+    Bit#(data_width)           data   ;
 } TLA #(`TLPARMSDEF) deriving(Bits, Eq, FShow);
 
 // B Channel definations
@@ -75,14 +75,15 @@ typedef enum {
 } TLD_OP deriving(Bits, Eq, FShow);
 
 typedef struct {
-    TLD_OP               opcode ;
-    Bit#(3)              param  ;
-    Bit#(size_width)     size   ;
-    Bit#(source_width)   source ;
-    Bit#(sink_width)     sink   ;
-    Bool                 denied ;
-    Bool                 corrupt;
-    Bit#(data_width)     data   ;
+    TLD_OP                            opcode ;
+    Bit#(3)                           param  ;
+    Bit#(size_width)                  size   ;
+    Bit#(source_width)                source ;
+    Bit#(sink_width)                  sink   ;
+    Bool                              denied ;
+    Bool                              corrupt;
+    Bit#(data_width)                  data   ;
+    // Bit#(TLog#(TDiv#(data_width, 8))) offset ; // Wired Extend signal, used during Non-Burst Width convertion.
 } TLD #(`TLPARMSDEF) deriving(Bits, Eq, FShow);
 
 // E Channel definations
@@ -95,8 +96,8 @@ typedef struct {
 // Record of local Tilelink information
 
 typedef struct {
-    Bit#(source_width) source_id;
-    Bit#(sink_width) sink_id;
+    Bit#(source_width) source;
+    Bit#(sink_width) sink;
 } TLINFO #(`TLPARMSDEF) deriving(Bits, Eq, FShow);
 
 interface TilelinkMST#(`TLPARMSDEF);
