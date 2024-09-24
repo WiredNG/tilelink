@@ -42,7 +42,7 @@ module mkTilelinkPingPongMst #(
         seq
             action
                 Bit#(max_burst_size) tmp = (1 << (tlb_dst.first.size - fromInteger(valueOf(non_burst_size)))) - 1;
-                if(verbose) $display("Forward message tlb to tlc with burst support, beats count: %d", tmp + 1);
+                if(verbose) $display("%x Forward message %x tlb to tlc with burst support, beats count: %d", info.source, tlb_dst.first.source, tmp + 1);
                 tlc_burst_count <= unpack({1'b0,tmp});
             endaction
             while (tlc_burst_count >= 0) seq
@@ -60,7 +60,7 @@ module mkTilelinkPingPongMst #(
                     if(tlb_dst.notEmpty && tlc_burst_count == 0) begin
                         // Keep FSM Running From stop.
                         Bit#(max_burst_size) tmp = (1 << (tlb_dst.first.size - fromInteger(valueOf(non_burst_size)))) - 1;
-                        if(verbose) $display("Forward message tlb to tlc with burst support, beats count: %d", tmp + 1);
+                        if(verbose) $display("%x Forward message %x tlb to tlc with burst support, beats count: %d", info.source, tlb_dst.first.source, tmp + 1);
                         tlc_burst_count <= unpack({1'b0,tmp});
                         tlb_dst.deq();
                     end else begin
@@ -179,6 +179,7 @@ module mkTilelinkPingPongSlv #(
             corrupt : tlc.corrupt,
             data    : tlc.data
         };
+        $display("Enq TLD Request %x with size %d", tlc.source, tlc.size);
         tld_src.enq(ret);
         tlc_dst.deq();
     endrule

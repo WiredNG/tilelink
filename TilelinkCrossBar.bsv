@@ -13,7 +13,8 @@ import CrossBar::*;
 
 // Note: Tileilnk Burst should not be interrupted.
 // So we need to rewrite arbiter to keep track of Burst request.
-module mkTLXArbiter #(
+// Note: mst_num >= 2
+module mkCoreTLXArbiter #(
     TLINFO#(`TLPARMS) info,
     function Bit#(size_width) getInfoFromTLx(tlx_t payload),
     module #(Arbiter_IFC#(mst_num)) mkArb
@@ -26,34 +27,45 @@ module mkTLXArbiter #(
     TLBurstTracker #(data_width, size_width, max_size) tracker <- mkTLBurstTracker;
     Arbiter_IFC#(mst_num) arb <- mkArb;
 
-    Reg#(Bool) locked <- mkReg(False);
-    Reg#(Vector#(mst_num, Bool)) lock_vec <- mkReg(unpack('0));
-    Reg#(Bit#(TLog#(mst_num))) lock_idx <- mkReg('0);
-    Wire#(Vector#(mst_num, tlx_t)) payloads <- mkWire;
+    // Two status: lock / unlock
+    // When Arbiter is unlock, select one request and feed to tracker.
+    // When Arbiter is locked, feed to tracker directly without further step.
+    Reg#(Bool) locked[2] <- mkCReg(2, False);
+    Reg#(Bit#(mst_num)) lock_vec[2] <- mkCReg(2, 0);
+    Reg#(Bit#(TLog#(mst_num))) lock_idx[2] <- mkCReg(2, ?);
+    Vector#(mst_num, Wire#(tlx_t)) payloads <- replicateM(mkDWire(?));
+    Vector#(mst_num, Wire#(Bool)) valid <- replicateM(mkDWire(False));
+    Wire#(tlx_t) sel_payload <- mkWire;
 
-    // Update locked status
-    rule upd_lock_handshake;
-        if(arb.clients[arb.grant_id].grant) begin
-            // Handshaked
-            tracker.handshake(getInfoFromTLx(payloads[arb.grant_id]));
+    // lock_vec update logic
+    rule lock_vec_update_handle;
+        Bit#(mst_num) tmp = 0;
+        tmp[arb.grant_id] = 1;
+        if(!locked[0]) begin
+            lock_vec[0] <= tmp;
+            lock_idx[0] <= arb.grant_id;
         end
     endrule
 
-    // Update locked status
-    rule upd_lock_regwrite;
-        if(tracker.burst && tracker.first) begin
-            // Lock in first beat
-            Bit#(TLog#(mst_num)) idx = 0;
-            locked <= True;
-            for(Integer m = 0 ; m < valueOf(mst_num) ; m = m + 1) begin
-                lock_vec[m] <= arb.clients[m].grant;
-                if(arb.clients[m].grant) idx = idx | fromInteger(m);
-            end
-            lock_idx <= idx;
-        end else if(tracker.last) begin
-            // Unlock in last beat
-            locked <= False;
-            lock_vec <= unpack('0);
+    // locked update logic
+    rule locked_update_handle;
+        if(tracker.valid && tracker.burst && tracker.first) locked[0] <= True; // Lock
+        else if(tracker.valid && tracker.last) locked[0] <= False; // Unlock
+    endrule
+
+    // sel payloads logic
+    rule sel_payload_handle;
+        sel_payload <= payloads[lock_idx[1]];
+    endrule
+
+    // handshake logic
+    rule handshake_handle;
+        Bit#(mst_num) judge = 0;
+        for(Integer m = 0 ; m < valueOf(mst_num) ; m = m + 1) begin
+            judge[m] = pack(valid[m] && unpack(lock_vec[1][m]));
+        end
+        if(judge != 0) begin
+            tracker.handshake(getInfoFromTLx(sel_payload));
         end
     endrule
 
@@ -63,27 +75,43 @@ module mkTLXArbiter #(
             interface XArbiterClient#(tlx_t);
                 method Action request(tlx_t payload);
                     payloads[m] <= payload;
-                    if(!locked || lock_vec[m]) begin
-                        arb.clients[m].request;
-                    end
+                    valid[m] <= True;
+                    if(!locked[0]) arb.clients[m].request;
                 endmethod
 
                 method Bool grant;
-                    if(!locked) return arb.clients[m].grant;
-                    else return lock_vec[m];
+                    return unpack(lock_vec[1][m]) && valid[m];
                 endmethod
             endinterface
         );
     end
     interface clients = ifs;
     method Bit#(TLog#(mst_num)) grant_id;
-        if(!locked) return arb.grant_id;
-        else return lock_idx;
+        return lock_idx[1];
     endmethod
 
 endmodule
 
-module mkTLXConnection #(
+
+module mkTLXArbiter #(
+    TLINFO#(`TLPARMS) info,
+    function Bit#(size_width) getInfoFromTLx(tlx_t payload),
+    module #(Arbiter_IFC#(mst_num)) mkArb
+)(
+    XArbiter#(mst_num, tlx_t)
+) provisos (
+    Bits#(tlx_t, tlx_size_t)
+);
+    XArbiter#(mst_num, tlx_t) intf;
+    if(valueOf(mst_num) < 2) begin
+        intf <- mkXArbiter(mkArb);
+    end else begin
+        intf <- mkCoreTLXArbiter(info, getInfoFromTLx, mkArb);
+    end
+    return intf;
+endmodule
+
+module mkTilelinkCrossBar #(
     function Bit#(slv_num) routeAddress(mst_index_t mst, Bit#(addr_width) addr),
     function Bit#(mst_num) routeSource(slv_index_t slv, Bit#(source_width) source),
     function Bit#(slv_num) routeSink(mst_index_t mst, Bit#(sink_width) sink),
@@ -149,7 +177,7 @@ module mkTLXConnection #(
 
     function Bit#(size_width) getSizeFromTLA(TLA#(`TLPARMS) tla);
         Bit#(3) op = pack(tla.opcode);
-        return unpack(op[3]) ? '0 : tla.size;
+        return unpack(op[2]) ? '0 : tla.size;
     endfunction
 
     function Bit#(size_width) getSizeFromTLC(TLC#(`TLPARMS) tlc);
@@ -164,10 +192,17 @@ module mkTLXConnection #(
     TLINFO#(`TLPARMS) tInfo = unpack('0);
 
     // Create 5 Crossbar
+    // mkCrossbarConnect(routeA, mkXArbiter(mkArbMst), mst_a_intf, slv_a_intf);
     mkCrossbarConnect(routeA, mkTLXArbiter(tInfo, getSizeFromTLA, mkArbMst), mst_a_intf, slv_a_intf);
+    
     mkCrossbarConnect(routeB, mkXArbiter(mkArbSlv), slv_b_intf, mst_b_intf);
+    
+    // mkCrossbarConnect(routeC, mkXArbiter(mkArbMst), mst_c_intf, slv_c_intf);
     mkCrossbarConnect(routeC, mkTLXArbiter(tInfo, getSizeFromTLC, mkArbMst), mst_c_intf, slv_c_intf);
+    
+    // mkCrossbarConnect(routeD, mkXArbiter(mkArbSlv), slv_d_intf, mst_d_intf);
     mkCrossbarConnect(routeD, mkTLXArbiter(tInfo, getSizeFromTLD, mkArbSlv), slv_d_intf, mst_d_intf);
+    
     mkCrossbarConnect(routeE, mkXArbiter(mkArbMst), mst_e_intf, slv_e_intf);
 
 endmodule

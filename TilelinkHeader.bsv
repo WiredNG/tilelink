@@ -8,6 +8,6 @@ import TilelinkDefines::*;
 import TilelinkBurstTracker::*;
 import TilelinkCrossBar::*;
 import TilelinkFake::*;
-import TilelinkTracker::*;
+import TilelinkBurstTracker::*;
 // import TilelinkWidthConverter::*;
 `endif
