@@ -37,7 +37,6 @@ module mkCoreTLXArbiter #(
     Vector#(mst_num, Wire#(Bool)) valid <- replicateM(mkDWire(False));
     Wire#(tlx_t) sel_payload <- mkWire;
 
-    // lock_vec update logic
     rule lock_vec_update_handle;
         Bit#(mst_num) tmp = 0;
         tmp[arb.grant_id] = 1;
@@ -47,18 +46,15 @@ module mkCoreTLXArbiter #(
         end
     endrule
 
-    // locked update logic
     rule locked_update_handle;
         if(tracker.valid && tracker.burst && tracker.first) locked[0] <= True; // Lock
         else if(tracker.valid && tracker.last) locked[0] <= False; // Unlock
     endrule
 
-    // sel payloads logic
     rule sel_payload_handle;
         sel_payload <= payloads[lock_idx[1]];
     endrule
 
-    // handshake logic
     rule handshake_handle;
         Bit#(mst_num) judge = 0;
         for(Integer m = 0 ; m < valueOf(mst_num) ; m = m + 1) begin
@@ -91,7 +87,6 @@ module mkCoreTLXArbiter #(
     endmethod
 
 endmodule
-
 
 module mkTLXArbiter #(
     TLINFO#(`TLPARMS) info,
@@ -136,7 +131,6 @@ module mkTilelinkCrossBar #(
     Vector#(slv_num, Put#(TLE#(`TLPARMS))) slv_e_intf = ?;
 
     for(Integer m = 0 ; m < valueOf(mst_num) ; m = m + 1) begin
-        // Extract master intf
         mst_a_intf[m] = mst_if[m].tla;
         mst_b_intf[m] = mst_if[m].tlb;
         mst_c_intf[m] = mst_if[m].tlc;
@@ -145,7 +139,6 @@ module mkTilelinkCrossBar #(
     end
 
     for(Integer s = 0 ; s < valueOf(slv_num) ; s = s + 1) begin
-        // Extract slave intf
         slv_a_intf[s] = slv_if[s].tla;
         slv_b_intf[s] = slv_if[s].tlb;
         slv_c_intf[s] = slv_if[s].tlc;
@@ -192,17 +185,10 @@ module mkTilelinkCrossBar #(
     TLINFO#(`TLPARMS) tInfo = unpack('0);
 
     // Create 5 Crossbar
-    // mkCrossbarConnect(routeA, mkXArbiter(mkArbMst), mst_a_intf, slv_a_intf);
     mkCrossbarConnect(routeA, mkTLXArbiter(tInfo, getSizeFromTLA, mkArbMst), mst_a_intf, slv_a_intf);
-    
     mkCrossbarConnect(routeB, mkXArbiter(mkArbSlv), slv_b_intf, mst_b_intf);
-    
-    // mkCrossbarConnect(routeC, mkXArbiter(mkArbMst), mst_c_intf, slv_c_intf);
     mkCrossbarConnect(routeC, mkTLXArbiter(tInfo, getSizeFromTLC, mkArbMst), mst_c_intf, slv_c_intf);
-    
-    // mkCrossbarConnect(routeD, mkXArbiter(mkArbSlv), slv_d_intf, mst_d_intf);
     mkCrossbarConnect(routeD, mkTLXArbiter(tInfo, getSizeFromTLD, mkArbSlv), slv_d_intf, mst_d_intf);
-    
     mkCrossbarConnect(routeE, mkXArbiter(mkArbMst), mst_e_intf, slv_e_intf);
 
 endmodule
